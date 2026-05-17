@@ -1,0 +1,47 @@
+plugins {
+    id 'application'
+    id 'com.diffplug.spotless' version '8.4.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.register('runRun', JavaExec){
+    group='application'
+    mainClass='de.hsbi.lockgame.Main'
+    classpath=sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runRestaurant', JavaExec){
+    group='application'
+    mainClass='restaurant.Main'
+    classpath=sourceSets.main.runtimeClasspath
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+spotless {
+
+
+    java {
+        target 'src/**/*.java'
+
+        googleJavaFormat().aosp()
+        formatAnnotations()
+
+    }
+}
