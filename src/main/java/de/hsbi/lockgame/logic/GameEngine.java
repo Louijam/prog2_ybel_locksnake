@@ -3,12 +3,14 @@ package de.hsbi.lockgame.logic;
 import de.hsbi.lockgame.model.Direction;
 import de.hsbi.lockgame.model.Level;
 import de.hsbi.lockgame.model.Snake;
-import de.hsbi.lockgame.ui.GamePanel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class GameEngine {
 
     private GameState gameState;
-    private GamePanel gamePanel;
+    private final List<GameStateObserver> observers = new ArrayList<>();
 
     public GameEngine(Level level) {
 
@@ -25,10 +27,16 @@ public final class GameEngine {
         return gameState;
     }
 
-    public void setGamePanel(GamePanel panel) {
-        this.gamePanel = panel;
+    // Observer registration
+    public void addObserver(GameStateObserver o) {
+        observers.add(o);
     }
 
+    private void notifyObservers() {
+        observers.forEach(o -> o.onStateChanged(gameState));
+    }
+
+    // INPUT
     public void update(Direction d) {
 
         if (d == gameState.pendingDirection().oppositeDirection()) {
@@ -43,18 +51,12 @@ public final class GameEngine {
             d
         );
 
-        benachrichtigeUI();
+        notifyObservers();
     }
 
+    // TICK
     public void tick() {
-
         gameState = gameState.tick();
-        benachrichtigeUI();
-    }
-
-    private void benachrichtigeUI() {
-        if (gamePanel != null) {
-            gamePanel.update(gameState);
-        }
+        notifyObservers();
     }
 }
