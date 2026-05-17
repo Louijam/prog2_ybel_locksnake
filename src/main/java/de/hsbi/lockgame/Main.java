@@ -23,7 +23,7 @@ public class Main {
             var panel = new GamePanel(engine.state(), new Java2DRenderer());
 
             // State: Engine -> UI: GamePanel.update(GameState)
-            engine.setGamePanel(panel);
+            engine.addObserver(panel);
 
             // Input/Direction: UI -> Engine: GameEngine.update(Direction)
             panel.setGameEngine(engine);

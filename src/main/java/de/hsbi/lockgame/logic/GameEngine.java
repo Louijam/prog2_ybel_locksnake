@@ -23,21 +23,28 @@ public final class GameEngine {
         );
     }
 
+    // -------------------------
+    // OBSERVER REGISTRATION
+    // -------------------------
+    public void addObserver(GameStateObserver observer) {
+        observers.add(observer);
+    }
+
+    // -------------------------
+    // STATE ACCESS
+    // -------------------------
     public GameState state() {
         return gameState;
     }
 
-    // Observer registration
-    public void addObserver(GameStateObserver o) {
-        observers.add(o);
-    }
-
-    private void notifyObservers() {
-        observers.forEach(o -> o.onStateChanged(gameState));
-    }
-
-    // INPUT
+    // -------------------------
+    // INPUT HANDLING
+    // -------------------------
     public void update(Direction d) {
+
+        if (gameState.status() != GameState.Status.RUNNING) {
+            return;
+        }
 
         if (d == gameState.pendingDirection().oppositeDirection()) {
             return;
@@ -54,9 +61,21 @@ public final class GameEngine {
         notifyObservers();
     }
 
-    // TICK
+    // -------------------------
+    // GAME LOOP
+    // -------------------------
     public void tick() {
+
         gameState = gameState.tick();
         notifyObservers();
+    }
+
+    // -------------------------
+    // OBSERVER NOTIFICATION
+    // -------------------------
+    private void notifyObservers() {
+        for (GameStateObserver o : observers) {
+            o.onStateChanged(gameState);
+        }
     }
 }

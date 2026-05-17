@@ -21,22 +21,35 @@ public final class GameState {
         this.pendingDirection = pendingDirection;
     }
 
-    public Level level() { return level; }
-    public Snake snake() { return snake; }
-    public List<Pin> pins() { return pins; }
-    public Status status() { return status; }
-    public Direction pendingDirection() { return pendingDirection; }
+    public Level level() {
+        return level;
+    }
 
-   GameState tick() {
+    public Snake snake() {
+        return snake;
+    }
 
-        // -------------------------
-        // Spiel läuft nicht
-        // -------------------------
+    public List<Pin> pins() {
+        return pins;
+    }
+
+    public Status status() {
+        return status;
+    }
+
+    public Direction pendingDirection() {
+        return pendingDirection;
+    }
+
+    // =========================================================
+    // CORE GAME LOGIC
+    // =========================================================
+    public GameState tick() {
+
         if (!status.isRunning() || pendingDirection == Direction.NONE) {
             return this;
         }
 
-        // nächstes Feld berechnen
         Position next = snake.nextHead(pendingDirection);
 
         // -------------------------
@@ -46,86 +59,50 @@ public final class GameState {
             return lose(Status.LOST_OUT_OF_BOUNDS);
         }
 
-        CellType cell = level.cellAt(next);
-
         // -------------------------
-        // WALL -> blockieren
+        // SELF COLLISION
         // -------------------------
-        if (cell == CellType.WALL) {
-            return new GameState(
-                level,
-                snake,
-                pins,
-                status,
-                Direction.NONE
-            );
+        if (snake.body().contains(next)) {
+            return lose(Status.LOST_SELF_COLLISION);
         }
 
         // -------------------------
-        // PIN SLOT
+        // WALL CHECK (MUST BE BEFORE PIN)
         // -------------------------
-        if (cell == CellType.PIN_SLOT) {
+        CellType cell = level.cellAt(next);
 
-            int pinIndex = -1;
-            Pin pin = null;
+        if (cell == CellType.WALL) {
+            return new GameState(level, snake, pins, status, Direction.NONE);
+        }
 
-            // passenden Pin suchen
-            for (int i = 0; i < pins.size(); i++) {
-                if (pins.get(i).position().equals(next)) {
-                    pin = pins.get(i);
-                    pinIndex = i;
-                    break;
-                }
+        // -------------------------
+        // PIN CHECK
+        // -------------------------
+        Pin pin = null;
+        int pinIndex = -1;
+
+        for (int i = 0; i < pins.size(); i++) {
+            if (pins.get(i).position().equals(next)) {
+                pin = pins.get(i);
+                pinIndex = i;
+                break;
+            }
+        }
+
+        if (pin != null) {
+
+            // block conditions
+            if (pin.state().isSet() ||
+                pin.activationDirection() != pendingDirection) {
+
+                return new GameState(level, snake, pins, status, Direction.NONE);
             }
 
-            // Sicherheitscheck
-            if (pin == null) {
-                return new GameState(
-                    level,
-                    snake,
-                    pins,
-                    status,
-                    Direction.NONE
-                );
-            }
-
-            // Pin bereits gesetzt -> blockieren
-            if (pin.state().isSet()) {
-                return new GameState(
-                    level,
-                    snake,
-                    pins,
-                    status,
-                    Direction.NONE
-                );
-            }
-
-            // falsche Richtung -> blockieren
-            if (pin.activationDirection() != pendingDirection) {
-                return new GameState(
-                    level,
-                    snake,
-                    pins,
-                    status,
-                    Direction.NONE
-                );
-            }
-
-            // -------------------------
-            // Pin aktivieren
-            // -------------------------
             List<Pin> newPins = new ArrayList<>(pins);
+            newPins.set(pinIndex, pin.withState(Pin.State.HIGH));
 
-            newPins.set(
-                pinIndex,
-                pin.withState(Pin.State.HIGH)
-            );
+            boolean won = newPins.stream().allMatch(p -> p.state().isSet());
 
-            boolean won = newPins.stream()
-                .allMatch(p -> p.state().isSet());
-
-            // Snake bleibt stehen
-            // nur Pin + Richtung ändern
             return new GameState(
                 level,
                 snake,
@@ -133,13 +110,6 @@ public final class GameState {
                 won ? Status.WON : status,
                 pendingDirection.oppositeDirection()
             );
-        }
-
-        // -------------------------
-        // SELF COLLISION
-        // -------------------------
-        if (snake.occupies(next)) {
-            return lose(Status.LOST_SELF_COLLISION);
         }
 
         // -------------------------
@@ -154,10 +124,16 @@ public final class GameState {
         );
     }
 
+    // =========================================================
+    // LOSS HELPER
+    // =========================================================
     private GameState lose(Status s) {
         return new GameState(level, snake, pins, s, Direction.NONE);
     }
 
+    // =========================================================
+    // STATUS
+    // =========================================================
     public enum Status {
         RUNNING,
         WON,
